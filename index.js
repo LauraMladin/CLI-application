@@ -1,43 +1,44 @@
-import { getContactById, listContacts } from "./contacts.js";
-import yargs from "yargs";
-import { hideBin } from "yargs/helpers";
-const argv = yargs(hideBin(process.argv)).argv;
-const action = argv.action;
+const { program } = require("commander");
 
-switch (action) {
-  case "list":
-    listContacts();
-    break;
-  case "add":
-    const hasAllArguments = argv.name && argv.email && argv.phone;
-    if (!hasAllArguments) {
-      console.log(
-        `For adding a contact we need 'name', 'email' and 'phone'!`.bgYellow
-      );
-    }
-    break;
+const contacts = require("./contacts.js");
 
-  case "remove":
-    if (argv.contactId) {
-      removeContact(argv.contactId);
-    } else {
-      console.log("Please provide the ID of the contact to remove.".bgYellow);
-    }
-    break;
+const invokeAction = async ({ action, id, name, email, phone }) => {
+  switch (action) {
+    case "list":
+      const contactsList = await contacts.listContacts();
+      console.table(contactsList);
+      break;
 
-  case "get":
-    if (argv.contactId) {
-      const contact = await getContactById(argv.contactId);
-      if (contact) {
-        console.log(contact);
-      } else {
-        console.log("Contact not found.");
-      }
-    } else {
-      console.log("Please provide the ID of the contact to retrieve.".bgYellow);
-    }
-    break;
+    case "get":
+      const getById = await contacts.getContactById(id);
+      console.log(getById);
+      break;
 
-  default:
-    console.log(`This command ${action} is not supported!`.bgYellow);
-}
+    case "add":
+      const newContact = await contacts.addContact({ name, email, phone });
+      console.log(newContact);
+      break;
+
+    case "remove":
+      const removeById = await contacts.removeContact(id);
+      console.log(removeById);
+      break;
+
+    default:
+      console.warn("\x1B[31m Unknown action type!");
+  }
+};
+
+program
+  .option("-a, --action <type>", "choose action")
+  .option("-i, --id <type>", "user id")
+  .option("-n, --name <type>", "user name")
+  .option("-e, --email <type>", "user email")
+  .option("-p, --phone <type>", "user phone");
+
+program.parse();
+
+const options = program.opts();
+(async () => {
+  await invokeAction(options);
+})();
